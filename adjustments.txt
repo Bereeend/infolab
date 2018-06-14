@@ -1,0 +1,10 @@
+List of adjustments tried to improve accuracy.
+
+Tried: 
+1. Variable learning rate, changing the lr every epoch did not work
+
+Yet to try:
+- Change momentum
+- Change learning rate
+- Change network
+- Data augmentation
