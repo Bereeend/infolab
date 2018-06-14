@@ -89,7 +89,7 @@ def main():
     device = "cuda:0" if use_cuda else "cpu"
 
     ## Update the 
-    trans = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    trans = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
     train_set = dset.MNIST(root='./mnist', train=True, transform=trans)
     test_set = dset.MNIST(root='./mnist', train=False, transform=trans)
 
@@ -139,8 +139,6 @@ def main():
     plt.show()
     test(args, model, device, test_loader, criterion, filename)
     ## TESTING
-
-
 
 def train(args, model, device, train_loader, optimizer, epoch, criterion):
     model.train()
