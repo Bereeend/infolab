@@ -4,14 +4,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
-import torch
-import torch.nn as nn
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
-import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+import matplotlib.pyplot as plt
 
 class LeNet(nn.Module):
     def __init__(self,n_class=10):
@@ -77,6 +74,12 @@ def main():
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
+    parser.add_argument('--filename', type=str, default='sumbission', metavar='FN',
+                        help='the filename of the submission')
+
+    filename = input("Please add a descriptive filename: ")
+    print("You entered " + str(filename))
+    
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -130,7 +133,9 @@ def main():
         train(args, model, device, train_loader, optimizer, epoch, criterion)
         val(args, model, device, valid_loader, criterion)
 
-    test(args, model, device, test_loader, criterion)
+    plt.plot(np.arange(len(train_loss)), train_loss)
+    plt.show()
+    test(args, model, device, test_loader, criterion, filename)
     ## TESTING
 
 
@@ -167,7 +172,7 @@ def val(args, model, device, val_loader, criterion):
         100. * correct / 6000))        
 
 
-def test(args, model, device, test_loader, criterion):
+def test(args, model, device, test_loader, criterion, filename):
     preds = []
     correct_cnt = 0
     total_cnt = 0.0
@@ -185,7 +190,7 @@ def test(args, model, device, test_loader, criterion):
             print('==>>> #test_samples: {}, acc: {:.3f}'.format(batch_idx+1, correct_cnt.item() * 1.0 / total_cnt))
 
      ## Writing to file
-    with open('submission.csv','w') as file:
+    with open(filename + '.csv','w') as file:
         file.write('Id,Label\n')
         for idx, lbl in enumerate(preds): 
             line = '{},{}'.format(idx,lbl.item())
