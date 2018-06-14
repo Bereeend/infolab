@@ -13,6 +13,31 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 
+class LeNet(nn.Module):
+    def __init__(self,n_class=10):
+        super(LeNet, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels = 1,
+            out_channels = 20,
+            kernel_size = 5
+        )
+        self.conv2 = nn.Conv2d(
+            in_channels = 20,
+            out_channels = 50,
+            kernel_size = 5
+        ) 
+        self.fc1 = nn.Linear(4*4*50, 500)
+        self.fc2 = nn.Linear(500, n_class)
+    def forward(self, x):
+        x = F.relu(self.conv1(x))   # x:[batch_size,1,28,28] => x:[batch_size,20, 24, 24]
+        x = F.max_pool2d(x, 2, 2)   # x:[batch_size,20,24,24] => x:[batch_size,20, 12, 12]
+        x = F.relu(self.conv2(x))   # x:[batch_size,20,12,12] => x:[batch_size,50, 8, 8]
+        x = F.max_pool2d(x, 2, 2)   # x:[batch_size,50,8,8] => x:[batch_size,50, 4, 4]
+        x = x.view(-1, 4*4*50)      # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
+        x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
+        x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
+        return x
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -97,10 +122,10 @@ def main():
     print('number of validation data:', split)
     print('number of test data:', len(test_set))
     
-    model = Net().to(device)
+    model = LeNet().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-    criterion = nn.NLLLoss()
-    
+    #criterion = nn.NLLLoss()
+    criterion = nn.CrossEntropyLoss()
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, train_loader, optimizer, epoch, criterion)
         val(args, model, device, valid_loader, criterion)
@@ -171,3 +196,4 @@ def test(args, model, device, test_loader, criterion):
     
 if __name__ == '__main__':
     main()
+
