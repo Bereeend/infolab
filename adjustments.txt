@@ -8,3 +8,4 @@ Yet to try:
 - Change learning rate
 - Change network
 - Data augmentation
+- Different loss functions
