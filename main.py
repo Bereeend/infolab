@@ -105,6 +105,7 @@ def main():
         val(args, model, device, valid_loader)
 
     ## TESTING
+    criterion = nn.CrossEntropyLoss()
     preds = []
     correct_cnt = 0
     total_cnt = 0.0
@@ -120,7 +121,7 @@ def main():
             print('==>>> #test_samples: {}, acc: {:.3f}'.format(batch_idx+1, correct_cnt.item() * 1.0 / total_cnt))
 
      ## Writing to file
-    with open('submission.csv','wb') as file:
+    with open('submission.csv','w') as file:
         file.write('Id,Label\n')
         for idx, lbl in enumerate(preds): 
             line = '{},{}'.format(idx,lbl.item())
