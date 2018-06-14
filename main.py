@@ -104,6 +104,28 @@ def main():
         train(args, model, device, train_loader, optimizer, epoch)
         val(args, model, device, valid_loader)
 
+    ## TESTING
+    preds = []
+    correct_cnt = 0
+    total_cnt = 0.0
+    for batch_idx, (x, target) in enumerate(test_loader):        
+        logits = model(x)
+        loss = criterion(logits, target)
+        _, pred_label = torch.max(logits, 1)
+        preds.append(pred_label)
+        total_cnt += x.size()[0]
+        correct_cnt += (pred_label == target).sum()
+
+        if(batch_idx+1) % 1000 == 0 or (batch_idx+1) == len(test_loader):
+            print('==>>> #test_samples: {}, acc: {:.3f}'.format(batch_idx+1, correct_cnt.item() * 1.0 / total_cnt))
+
+     ## Writing to file
+    with open('submission.csv','wb') as file:
+        file.write('Id,Label\n')
+        for idx, lbl in enumerate(preds): 
+            line = '{},{}'.format(idx,lbl.item())
+            file.write(line)
+            file.write('\n')
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
@@ -136,5 +158,8 @@ def val(args, model, device, val_loader):
         test_loss, correct, len(val_loader.dataset),
         100. * correct / len(val_loader.dataset)))        
 
+
+
+    
 if __name__ == '__main__':
     main()
