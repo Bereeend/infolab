@@ -99,13 +99,14 @@ def main():
     
     model = Net().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-
+    criterion = nn.NLLLoss()
+    
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
-        val(args, model, device, valid_loader)
+        train(args, model, device, train_loader, optimizer, epoch, criterion)
+        val(args, model, device, valid_loader, criterion)
 
     ## TESTING
-    criterion = nn.CrossEntropyLoss()
+
     preds = []
     correct_cnt = 0
     total_cnt = 0.0
@@ -128,13 +129,13 @@ def main():
             file.write(line)
             file.write('\n')
 
-def train(args, model, device, train_loader, optimizer, epoch):
+def train(args, model, device, train_loader, optimizer, epoch, criterion):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = F.nll_loss(output, target)
+        loss = criterion(output, target)
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
@@ -142,7 +143,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset) - 6000,
                 100. * batch_idx / len(train_loader), loss.item()))
 
-def val(args, model, device, val_loader):
+def val(args, model, device, val_loader, criterion):
     model.eval()
     test_loss = 0
     correct = 0
@@ -150,7 +151,7 @@ def val(args, model, device, val_loader):
         for data, target in val_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += F.nll_loss(output, target, size_average=False).item() # sum up batch loss
+            test_loss += criterion(output, target) # sum up batch loss
             pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
 
