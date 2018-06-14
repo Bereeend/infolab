@@ -22,13 +22,13 @@ class LeNet(nn.Module):
             in_channels = 20,
             out_channels = 50,
             kernel_size = 5
-        ) 
+        )
         self.fc1 = nn.Linear(4*4*50, 500)
         self.fc2 = nn.Linear(500, n_class)
     def forward(self, x):
-        x = F.relu(self.conv1(x))   # x:[batch_size,1,28,28] => x:[batch_size,20, 24, 24]
+        x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)   # x:[batch_size,20,24,24] => x:[batch_size,20, 12, 12]
-        x = F.relu(self.conv2(x))   # x:[batch_size,20,12,12] => x:[batch_size,50, 8, 8]
+        x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)   # x:[batch_size,50,8,8] => x:[batch_size,50, 4, 4]
         x = x.view(-1, 4*4*50)      # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
         x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
@@ -90,7 +90,10 @@ def main():
 
     ## Update the 
 
-    trans = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    trans = transforms.Compose([transforms.RandomRotation(degrees=(-8, 8)),
+                                transforms.ToTensor(),
+                                transforms.Normalize((0.1307,),
+                                (0.3081,))])
 
     train_set = dset.MNIST(root='./mnist', train=True, transform=trans)
     test_set = dset.MNIST(root='./mnist', train=False, transform=trans)
@@ -172,7 +175,7 @@ def val(args, model, device, val_loader, criterion):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(val_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accura cy: {}/{} ({:.0f}%)\n'.format(
+    print('\nValdidation set: Average loss: {:.4f}, Accura cy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, 6000,
         100. * correct / 6000))        
 
