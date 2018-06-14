@@ -196,9 +196,8 @@ def test(args, model, device, test_loader, criterion, filename):
             line = '{},{}'.format(idx,lbl.item())
             file.write(line)
             file.write('\n')    
-    
 
-    
+
 if __name__ == '__main__':
     main()
 
