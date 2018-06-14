@@ -89,7 +89,9 @@ def main():
     device = "cuda:0" if use_cuda else "cpu"
 
     ## Update the 
+
     trans = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+
     train_set = dset.MNIST(root='./mnist', train=True, transform=trans)
     test_set = dset.MNIST(root='./mnist', train=False, transform=trans)
 
@@ -132,6 +134,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     
     for epoch in range(1, args.epochs + 1):
+        adjust_learning_rate(args, optimizer, epoch)
         train(args, model, device, train_loader, optimizer, epoch, criterion)
         val(args, model, device, valid_loader, criterion)
 
@@ -198,9 +201,13 @@ def test(args, model, device, test_loader, criterion, filename):
             line = '{},{}'.format(idx,lbl.item())
             file.write(line)
             file.write('\n')    
-    
 
-    
+def adjust_learning_rate(args, optimizer, epoch):
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    lr = args.lr * (0.1 ** (epoch // 10))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr            
+
 if __name__ == '__main__':
     main()
 
