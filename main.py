@@ -155,8 +155,8 @@ def val(args, model, device, val_loader):
 
     test_loss /= len(val_loader.dataset)
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(val_loader.dataset),
-        100. * correct / len(val_loader.dataset)))        
+        test_loss, correct, 6000,
+        100. * correct / 6000))        
 
 
 
