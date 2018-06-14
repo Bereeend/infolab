@@ -35,6 +35,7 @@ class LeNet(nn.Module):
         x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
         return x
 
+train_loss_tot = []
 
 class Net(nn.Module):
     def __init__(self):
@@ -129,11 +130,12 @@ def main():
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     #criterion = nn.NLLLoss()
     criterion = nn.CrossEntropyLoss()
+    
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, train_loader, optimizer, epoch, criterion)
         val(args, model, device, valid_loader, criterion)
 
-    plt.plot(np.arange(len(train_loss)), train_loss)
+    plt.plot(np.arange(len(train_loss_tot)), train_loss_tot)
     plt.show()
     test(args, model, device, test_loader, criterion, filename)
     ## TESTING
@@ -147,12 +149,14 @@ def train(args, model, device, train_loader, optimizer, epoch, criterion):
         optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, target)
+        train_loss_tot.append(loss)
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset) - 6000,
                 100. * batch_idx / len(train_loader), loss.item()))
+
 
 def val(args, model, device, val_loader, criterion):
     model.eval()
