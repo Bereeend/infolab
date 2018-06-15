@@ -10,6 +10,48 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 
+class TestNet(nn.Module):
+    def __init__(self,n_class=10):
+        super(TestNet, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels = 1,
+            out_channels = 32,
+            kernel_size = 3
+        )
+        self.conv2 = nn.Conv2d(
+            in_channels = 32,
+            out_channels = 32,
+            kernel_size = 3
+        )
+        self.conv3 = nn.Conv2d(
+            in_channels = 32,
+            out_channels = 64,
+            kernel_size = 3
+        )
+        self.conv4 = nn.Conv2d(
+            in_channels = 64,
+            out_channels = 64,
+            kernel_size = 3
+        )
+        self.bn = nn.BatchNorm2d(32)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.fc1 = nn.Linear(4*4*64, 500)
+        self.fc2 = nn.Linear(500, n_class)
+
+    def forward(self, x):
+        x = F.relu(self.bn(self.conv1(x)))
+        x = F.relu(self.bn(self.conv2(x)))
+        x = F.max_pool2d(x, 2, 2)
+        
+        x = F.relu(self.bn2(self.conv3(x)))
+        x = F.relu(self.bn2(self.conv4(x)))
+        x = F.max_pool2d(x, 2, 2)
+        
+        x = x.view(-1, 4*4*64)      # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
+        x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
+        x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
+        return x
+
 class LeNet(nn.Module):
     def __init__(self,n_class=10):
         super(LeNet, self).__init__()
@@ -35,8 +77,6 @@ class LeNet(nn.Module):
         x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
         return x
 
-train_loss_tot = []
-
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -55,6 +95,7 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
+train_loss_tot = []
 
 def main():
     # Training settings
@@ -131,7 +172,7 @@ def main():
     print('number of validation data:', split)
     print('number of test data:', len(test_set))
     
-    model = LeNet().to(device)
+    model = TestNet().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     #criterion = nn.NLLLoss()
     criterion = nn.CrossEntropyLoss()
