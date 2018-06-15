@@ -82,10 +82,10 @@ def main():
     ## Update the 
 
     ## Use different transformations during training and testing.
-    trans_train = transforms.Compose([transforms.RandomRotation(degrees=(-8, 8)),
-                                transforms.RandomResizedCrop(size=28, scale=(0.95, 1.05)),
-                                transforms.ToTensor(),
-                                transforms.Normalize((0.1307,),(0.3081,))])
+    trans_train = transforms.Compose([transforms.RandomResizedCrop(size=24, scale=(0.95, 1.05)),
+                                    transforms.RandomRotation(degrees=(-8, 8)),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.1307,),(0.3081,))])
 
     ## Images should not be rotated and cropped in the test set
     trans_test = transforms.Compose([transforms.ToTensor(),
