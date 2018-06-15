@@ -10,6 +10,38 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 
+class BeStNet(nn.Module):
+    def __init__(self,n_class=10):
+        super(BeStNet, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels = 1,
+            out_channels = 64,
+            kernel_size = 3
+        )
+        self.conv2 = nn.Conv2d(
+            in_channels = 64,
+            out_channels = 128,
+            kernel_size = 3
+        )
+        self.conv3 = nn.Conv2d(
+            in_channels = 128,
+            out_channels = 256,
+            kernel_size = 5
+        )
+        self.fc1 = nn.Linear(256, 500)
+        self.fc2 = nn.Linear(500, n_class)
+        
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2, 2)   # x:[batch_size,20,24,24] => x:[batch_size,20, 12, 12]
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv3(x))
+        x = x.view(-1, 256)     # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
+        x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
+        x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
+        return x
+
 class LeNet(nn.Module):
     def __init__(self,n_class=10):
         super(LeNet, self).__init__()
@@ -34,6 +66,8 @@ class LeNet(nn.Module):
         x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
         x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
         return x
+
+
 
 train_loss_tot = []
 
@@ -69,6 +103,8 @@ def main():
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
+    parser.add_argument('--weightdecay', type=float, default=1e-4, metavar='wd',
+                        help='SGD weightdecay (default: 1e-4)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -90,10 +126,9 @@ def main():
 
     ## Update the 
 
-    trans = transforms.Compose([transforms.RandomRotation(degrees=(-8, 8)),
+    trans = transforms.Compose([transforms.RandomRotation(degrees=(-6, 6)),
                                 transforms.ToTensor(),
-                                transforms.Normalize((0.1307,),
-                                (0.3081,))])
+                                transforms.Normalize((0.1307,),(0.3081,))])
 
     train_set = dset.MNIST(root='./mnist', train=True, transform=trans)
     test_set = dset.MNIST(root='./mnist', train=False, transform=trans)
@@ -131,8 +166,9 @@ def main():
     print('number of validation data:', split)
     print('number of test data:', len(test_set))
     
-    model = LeNet().to(device)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    model = BeStNet().to(device)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr,
+                          momentum=args.momentum, weight_decay = args.weightdecay)
     #criterion = nn.NLLLoss()
     criterion = nn.CrossEntropyLoss()
     
