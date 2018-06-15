@@ -26,9 +26,9 @@ class BeStNet(nn.Module):
         self.conv3 = nn.Conv2d(
             in_channels = 128,
             out_channels = 256,
-            kernel_size = 5
+            kernel_size = 3
         )
-        self.fc1 = nn.Linear(256, 500)
+        self.fc1 = nn.Linear(9*256, 500)
         self.fc2 = nn.Linear(500, n_class)
         
     def forward(self, x):
@@ -37,58 +37,12 @@ class BeStNet(nn.Module):
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv3(x))
-        x = x.view(-1, 256)     # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
+        x = x.view(-1, 9*256)     # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
         x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
         x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
         return x
-
-class LeNet(nn.Module):
-    def __init__(self,n_class=10):
-        super(LeNet, self).__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels = 1,
-            out_channels = 20,
-            kernel_size = 5
-        )
-        self.conv2 = nn.Conv2d(
-            in_channels = 20,
-            out_channels = 50,
-            kernel_size = 5
-        )
-        self.fc1 = nn.Linear(4*4*50, 500)
-        self.fc2 = nn.Linear(500, n_class)
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)   # x:[batch_size,20,24,24] => x:[batch_size,20, 12, 12]
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)   # x:[batch_size,50,8,8] => x:[batch_size,50, 4, 4]
-        x = x.view(-1, 4*4*50)      # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
-        x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
-        x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
-        return x
-
-
 
 train_loss_tot = []
-
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, 10)
-
-    def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        x = x.view(-1, 320)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
-
 
 def main():
     # Training settings
@@ -114,6 +68,7 @@ def main():
     parser.add_argument('--filename', type=str, default='sumbission', metavar='FN',
                         help='the filename of the submission')
 
+    ##Input for what the csv output file should be named
     filename = input("Please add a descriptive filename: ")
     print("You entered " + str(filename))
     
@@ -126,18 +81,24 @@ def main():
 
     ## Update the 
 
-    trans = transforms.Compose([transforms.RandomRotation(degrees=(-6, 6)),
+    ## Use different transformations during training and testing.
+    trans_train = transforms.Compose([transforms.RandomRotation(degrees=(-8, 8)),
+                                transforms.RandomResizedCrop(size=28, scale=(0.95, 1.05)),
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.1307,),(0.3081,))])
 
-    train_set = dset.MNIST(root='./mnist', train=True, transform=trans)
-    test_set = dset.MNIST(root='./mnist', train=False, transform=trans)
+    ## Images should not be rotated and cropped in the test set
+    trans_test = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Normalize((0.1307,),(0.3081,))])
+
+    train_set = dset.MNIST(root='./mnist', train=True, transform=trans_train)
+    test_set = dset.MNIST(root='./mnist', train=False, transform=trans_test)
 
 
     #divide the set to training and validation
     from torch.utils.data.sampler import SubsetRandomSampler
     num_train = len(train_set)
-    valid_size = 0.1
+    valid_size = 0.015
     indices = list(range(num_train))
     split = int(np.floor(valid_size * num_train))
     train_idx, valid_idx = indices[split:], indices[:split]
@@ -194,7 +155,7 @@ def train(args, model, device, train_loader, optimizer, epoch, criterion):
         optimizer.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset) - 6000,
+                epoch, batch_idx * len(data), len(train_loader.dataset) - 900,
                 100. * batch_idx / len(train_loader), loss.item()))
 
 
@@ -212,8 +173,8 @@ def val(args, model, device, val_loader, criterion):
 
     test_loss /= len(val_loader.dataset)
     print('\nValdidation set: Average loss: {:.4f}, Accura cy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, 6000,
-        100. * correct / 6000))        
+        test_loss, correct, 900,
+        100. * correct / 900))        
 
 
 def test(args, model, device, test_loader, criterion, filename):
@@ -231,7 +192,7 @@ def test(args, model, device, test_loader, criterion, filename):
         correct_cnt += (pred_label == target).sum()
 
         if(batch_idx+1) % 1000 == 0 or (batch_idx+1) == len(test_loader):
-            print('==>>> #test_samples: {}, acc: {:.3f}'.format(batch_idx+1, correct_cnt.item() * 1.0 / total_cnt))
+            print('==>>> #test_samples: {}, acc: {:.7f}'.format(batch_idx+1, correct_cnt.item() * 1.0 / total_cnt))
 
      ## Writing to file
     with open(filename + '.csv','w') as file:
