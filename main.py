@@ -9,74 +9,44 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
-
-class BeStNet2(nn.Module):
-    def __init__(self,n_class=10):
-        super(BeStNet2, self).__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels = 1,
-            out_channels = 32,
-            kernel_size = 3
-        )
-        self.dropout1 = nn.Dropout2d(p = 0.5)
-        self.conv2 = nn.Conv2d(
-            in_channels = 32,
-            out_channels = 64,
-            kernel_size = 3
-        )
-        self.dropout2 = nn.Dropout2d(p = 0.5)
-        self.fc1 = nn.Linear(11*11*64, 500)
-        self.fc2 = nn.Linear(500, n_class)
-        
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.dropout1(x)
-        x = F.max_pool2d(x, 2, 2)   
-        x = F.relu(self.conv2(x))
-        x = self.dropout2(x)
-        x = x.view(-1, 11*11*64)    
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+import Augmentor
 
 class BeStNet(nn.Module):
     def __init__(self,n_class=10):
         super(BeStNet, self).__init__()
         self.conv1 = nn.Conv2d(
             in_channels = 1,
-            out_channels = 64,
-            kernel_size = 3
-        )
-        self.dropout1 = nn.Dropout2d(p = 0.1)
-        self.conv2 = nn.Conv2d(
-            in_channels = 64,
             out_channels = 128,
             kernel_size = 3
         )
-        self.dropout2 = nn.Dropout2d(p = 0.1)
-        self.conv3 = nn.Conv2d(
+        self.conv2 = nn.Conv2d(
             in_channels = 128,
             out_channels = 256,
             kernel_size = 3
         )
-        self.dropout3 = nn.Dropout2d(p = 0.1)
-        self.fc1 = nn.Linear(9*256, 500)
+        self.conv3 = nn.Conv2d(
+            in_channels = 256,
+            out_channels = 512,
+            kernel_size = 3
+        )
+        
+        self.fc1 = nn.Linear(9*512, 500)
         self.fc2 = nn.Linear(500, n_class)
         
     def forward(self, x):
         x = F.relu(self.conv1(x))
-#        x = self.dropout1(x)
         x = F.max_pool2d(x, 2, 2)  
         x = F.relu(self.conv2(x))
-#        x = self.dropout2(x)
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv3(x))
-#        x = self.dropout3(x)
-        x = x.view(-1, 9*256)     
+
+        x = x.view(-1, 9*512)     
         x = F.relu(self.fc1(x))   
         x = self.fc2(x)           
         return x
 
+p = Augmentor.Pipeline("./mnist")
+p.random_distortion(probability=0.9, grid_width=5, grid_height=5, magnitude = 2)
 train_loss_tot = []
 
 def main():
@@ -117,10 +87,11 @@ def main():
     ## Update the 
 
     ## Use different transformations during training and testing.
-    trans_train = transforms.Compose([transforms.RandomRotation(degrees=(-10, 10)),
-                                transforms.RandomResizedCrop(size=28, scale=(0.90, 1.1)),
-                                transforms.ToTensor(),
-                                transforms.Normalize((0.1307,),(0.3081,))])
+    trans_train = transforms.Compose([p.torch_transform(),
+                                      transforms.RandomRotation(degrees=(-10, 10)),
+                                      transforms.RandomResizedCrop(size=28, scale=(0.9, 1.1)),
+                                      transforms.ToTensor(),
+                                      transforms.Normalize((0.1307,),(0.3081,))])
 
     ## Images should not be rotated and cropped in the test set
     trans_test = transforms.Compose([transforms.ToTensor(),
@@ -140,7 +111,7 @@ def main():
     train_sampler = SubsetRandomSampler(train_idx)
     valid_sampler = SubsetRandomSampler(valid_idx)
 
-    kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+    kwargs = {'num_workers': 8, 'pin_memory': True} if use_cuda else {}
     
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
@@ -172,8 +143,8 @@ def main():
         train(args, model, device, train_loader, optimizer, epoch, criterion)
         val(args, model, device, valid_loader, criterion)
 
-    plt.plot(np.arange(len(train_loss_tot)), train_loss_tot)
-    plt.show()
+#    plt.plot(np.arange(len(train_loss_tot)), train_loss_tot)
+#    plt.show()
     test(args, model, device, test_loader, criterion, filename)
     ## TESTING
 
