@@ -45,6 +45,8 @@ class BeStNet(nn.Module):
         x = self.fc2(x)           
         return x
 
+
+## Augmenter for distorting the images
 p = Augmentor.Pipeline("./mnist")
 p.random_distortion(probability=0.9, grid_width=5, grid_height=5, magnitude = 2)
 train_loss_tot = []
