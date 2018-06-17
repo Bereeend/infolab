@@ -10,6 +10,35 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 
+class BeStNet2(nn.Module):
+    def __init__(self,n_class=10):
+        super(BeStNet2, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels = 1,
+            out_channels = 32,
+            kernel_size = 3
+        )
+        self.dropout1 = nn.Dropout2d(p = 0.5)
+        self.conv2 = nn.Conv2d(
+            in_channels = 32,
+            out_channels = 64,
+            kernel_size = 3
+        )
+        self.dropout2 = nn.Dropout2d(p = 0.5)
+        self.fc1 = nn.Linear(11*11*64, 500)
+        self.fc2 = nn.Linear(500, n_class)
+        
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = self.dropout1(x)
+        x = F.max_pool2d(x, 2, 2)   
+        x = F.relu(self.conv2(x))
+        x = self.dropout2(x)
+        x = x.view(-1, 11*11*64)    
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
 class BeStNet(nn.Module):
     def __init__(self,n_class=10):
         super(BeStNet, self).__init__()
@@ -18,28 +47,34 @@ class BeStNet(nn.Module):
             out_channels = 64,
             kernel_size = 3
         )
+        self.dropout1 = nn.Dropout2d(p = 0.1)
         self.conv2 = nn.Conv2d(
             in_channels = 64,
             out_channels = 128,
             kernel_size = 3
         )
+        self.dropout2 = nn.Dropout2d(p = 0.1)
         self.conv3 = nn.Conv2d(
             in_channels = 128,
             out_channels = 256,
             kernel_size = 3
         )
+        self.dropout3 = nn.Dropout2d(p = 0.1)
         self.fc1 = nn.Linear(9*256, 500)
         self.fc2 = nn.Linear(500, n_class)
         
     def forward(self, x):
         x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)   # x:[batch_size,20,24,24] => x:[batch_size,20, 12, 12]
+#        x = self.dropout1(x)
+        x = F.max_pool2d(x, 2, 2)  
         x = F.relu(self.conv2(x))
+#        x = self.dropout2(x)
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv3(x))
-        x = x.view(-1, 9*256)     # x:[batch_size,50,4,4] => x:[batch_size,50*4*4]
-        x = F.relu(self.fc1(x))     # x:[batch_size,50*4*4] => x:[batch_size,500]
-        x = self.fc2(x)             # x:[batch_size,500] => x:[batch_size,10]
+#        x = self.dropout3(x)
+        x = x.view(-1, 9*256)     
+        x = F.relu(self.fc1(x))   
+        x = self.fc2(x)           
         return x
 
 train_loss_tot = []
@@ -57,8 +92,8 @@ def main():
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--weightdecay', type=float, default=1e-4, metavar='wd',
-                        help='SGD weightdecay (default: 1e-4)')
+    parser.add_argument('--weightdecay', type=float, default=0, metavar='wd',
+                        help='SGD weightdecay (default: 0)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -82,8 +117,8 @@ def main():
     ## Update the 
 
     ## Use different transformations during training and testing.
-    trans_train = transforms.Compose([transforms.RandomRotation(degrees=(-8, 8)),
-                                transforms.RandomResizedCrop(size=28, scale=(0.95, 1.05)),
+    trans_train = transforms.Compose([transforms.RandomRotation(degrees=(-10, 10)),
+                                transforms.RandomResizedCrop(size=28, scale=(0.90, 1.1)),
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.1307,),(0.3081,))])
 
@@ -98,7 +133,7 @@ def main():
     #divide the set to training and validation
     from torch.utils.data.sampler import SubsetRandomSampler
     num_train = len(train_set)
-    valid_size = 0.015
+    valid_size = 0
     indices = list(range(num_train))
     split = int(np.floor(valid_size * num_train))
     train_idx, valid_idx = indices[split:], indices[:split]
@@ -130,9 +165,8 @@ def main():
     model = BeStNet().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr,
                           momentum=args.momentum, weight_decay = args.weightdecay)
-    #criterion = nn.NLLLoss()
     criterion = nn.CrossEntropyLoss()
-    
+    print("Device:", device)
     for epoch in range(1, args.epochs + 1):
         adjust_learning_rate(args, optimizer, epoch)
         train(args, model, device, train_loader, optimizer, epoch, criterion)
@@ -142,6 +176,7 @@ def main():
     plt.show()
     test(args, model, device, test_loader, criterion, filename)
     ## TESTING
+
 
 def train(args, model, device, train_loader, optimizer, epoch, criterion):
     model.train()
@@ -195,16 +230,18 @@ def test(args, model, device, test_loader, criterion, filename):
             print('==>>> #test_samples: {}, acc: {:.7f}'.format(batch_idx+1, correct_cnt.item() * 1.0 / total_cnt))
 
      ## Writing to file
-    with open(filename + '.csv','w') as file:
+    with open(filename + '_' + str(correct_cnt.item() * 1.0 /total_cnt) + '.csv','w') as file:
         file.write('Id,Label\n')
         for idx, lbl in enumerate(preds): 
             line = '{},{}'.format(idx,lbl.item())
             file.write(line)
-            file.write('\n')    
+            file.write('\n')
+    torch.save(model.state_dict,
+               filename + '_' + str(correct_cnt.item() * 1.0 /total_cnt) + '.pth.tar')
 
 def adjust_learning_rate(args, optimizer, epoch):
     """Sets the learning rate to the initial LR decayed by 10 every 10 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 10))
+    lr = args.lr * (0.1 ** (epoch // 12))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr            
 
